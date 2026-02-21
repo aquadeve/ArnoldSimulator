@@ -17,6 +17,19 @@
 #include <unistd.h>
 #endif
 
+#ifndef _WIN32
+static void picolm_madvise_sequential(void *addr, size_t len) {
+#if defined(MADV_SEQUENTIAL)
+    (void)madvise(addr, len, MADV_SEQUENTIAL);
+#elif defined(POSIX_MADV_SEQUENTIAL)
+    (void)posix_madvise(addr, len, POSIX_MADV_SEQUENTIAL);
+#else
+    (void)addr;
+    (void)len;
+#endif
+}
+#endif
+
 /* ---- GGUF metadata value types ---- */
 enum {
     GGUF_META_UINT8   = 0,
@@ -179,7 +192,7 @@ static int mmap_file(model_t *m, const char *path) {
         close(fd);
         return -1;
     }
-    madvise(addr, m->mmap_size, MADV_SEQUENTIAL);
+    picolm_madvise_sequential(addr, m->mmap_size);
 
     m->mmap_addr = addr;
     m->fd = fd;
